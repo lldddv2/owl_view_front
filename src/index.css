@@ -515,7 +515,7 @@ h1, h2, h3 {
 /* ─── Video Player ───────────────────────────────────────────────────── */
 .player-container {
   width: 100%;
-  max-width: 900px;
+  max-width: 1200px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -617,12 +617,12 @@ h1, h2, h3 {
 /* ─── Two-column player layout ───────────────────────────────────────── */
 .player-layout {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 1fr 300px;
   gap: 16px;
   align-items: start;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 640px) {
   .player-layout {
     grid-template-columns: 1fr;
   }

@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import type { ProcessorData, FrameDetections } from "../hooks/useVideoProcessor";
 
@@ -219,14 +219,36 @@ export function VideoPlayer({ data, onReset }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [currentFrameIdx, setCurrentFrameIdx] = useState(0);
 
+  const sortedFrameKeys = useMemo(
+    () => Object.keys(data.frames).map(Number).sort((a, b) => a - b),
+    [data.frames]
+  );
+
   const handleTimeUpdate = useCallback(() => {
     const v = videoRef.current;
-    if (!v || !v.duration || isNaN(v.duration)) return;
+    if (!v || !v.duration || isNaN(v.duration) || v.duration === 0) return;
     const idx = Math.floor((v.currentTime / v.duration) * data.totalFrames);
     setCurrentFrameIdx(Math.min(idx, data.totalFrames - 1));
   }, [data.totalFrames]);
 
-  const currentFrame = data.frames[String(currentFrameIdx)];
+  // Find the nearest frame with data when exact key doesn't exist
+  const currentFrame: FrameDetections | undefined = useMemo(() => {
+    const exact = data.frames[String(currentFrameIdx)];
+    if (exact) return exact;
+    if (sortedFrameKeys.length === 0) return undefined;
+    let lo = 0;
+    let hi = sortedFrameKeys.length - 1;
+    while (lo < hi - 1) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (sortedFrameKeys[mid] <= currentFrameIdx) lo = mid;
+      else hi = mid;
+    }
+    const a = sortedFrameKeys[lo];
+    const b = sortedFrameKeys[hi];
+    const nearestKey =
+      Math.abs(a - currentFrameIdx) <= Math.abs(b - currentFrameIdx) ? a : b;
+    return data.frames[String(nearestKey)];
+  }, [currentFrameIdx, data.frames, sortedFrameKeys]);
 
   return (
     <motion.div
