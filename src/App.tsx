@@ -5,7 +5,7 @@ import { ProcessingStatus } from "./components/ProcessingStatus";
 import { VideoPlayer } from "./components/VideoPlayer";
 
 export default function App() {
-  const { state, videoUrl, errorMessage, processVideo, reset } =
+  const { state, data, errorMessage, processVideo, reset } =
     useVideoProcessor();
 
   return (
@@ -37,10 +37,10 @@ export default function App() {
             <ProcessingStatus key="processing" />
           )}
 
-          {state === "done" && videoUrl && (
+          {state === "done" && data && (
             <VideoPlayer
               key="player"
-              videoUrl={videoUrl}
+              data={data}
               onReset={reset}
             />
           )}

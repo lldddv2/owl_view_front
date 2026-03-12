@@ -1,13 +1,25 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 
 const API_URL = `${import.meta.env.VITE_API_URL}/process_video`;
 const MAX_FILE_SIZE_MB = 500;
 
 export type ProcessorState = "idle" | "processing" | "done" | "error";
 
+export interface FrameDetections {
+  total: number;
+  [cls: string]: number;
+}
+
+export interface ProcessorData {
+  videoSrc: string;
+  totalFrames: number;
+  totalDetecciones: number;
+  frames: Record<string, FrameDetections>;
+}
+
 export interface VideoProcessorResult {
   state: ProcessorState;
-  videoUrl: string | null;
+  data: ProcessorData | null;
   errorMessage: string | null;
   processVideo: (file: File) => Promise<void>;
   reset: () => void;
@@ -15,16 +27,11 @@ export interface VideoProcessorResult {
 
 export function useVideoProcessor(): VideoProcessorResult {
   const [state, setState] = useState<ProcessorState>("idle");
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [data, setData] = useState<ProcessorData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const prevUrlRef = useRef<string | null>(null);
 
   const reset = useCallback(() => {
-    if (prevUrlRef.current) {
-      URL.revokeObjectURL(prevUrlRef.current);
-      prevUrlRef.current = null;
-    }
-    setVideoUrl(null);
+    setData(null);
     setErrorMessage(null);
     setState("idle");
   }, []);
@@ -42,14 +49,9 @@ export function useVideoProcessor(): VideoProcessorResult {
       return;
     }
 
-    if (prevUrlRef.current) {
-      URL.revokeObjectURL(prevUrlRef.current);
-      prevUrlRef.current = null;
-    }
-
     setState("processing");
     setErrorMessage(null);
-    setVideoUrl(null);
+    setData(null);
 
     try {
       const formData = new FormData();
@@ -65,10 +67,14 @@ export function useVideoProcessor(): VideoProcessorResult {
         throw new Error(text || `Error del servidor (HTTP ${res.status})`);
       }
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      prevUrlRef.current = url;
-      setVideoUrl(url);
+      const json = await res.json();
+
+      setData({
+        videoSrc: `data:video/mp4;base64,${json.video_base64}`,
+        totalFrames: json.total_frames,
+        totalDetecciones: json.total_detecciones,
+        frames: json.frames,
+      });
       setState("done");
     } catch (err: unknown) {
       const message =
@@ -80,5 +86,5 @@ export function useVideoProcessor(): VideoProcessorResult {
     }
   }, []);
 
-  return { state, videoUrl, errorMessage, processVideo, reset };
+  return { state, data, errorMessage, processVideo, reset };
 }
